@@ -10,42 +10,6 @@ require "../prog01/database.php";
 require "customer.class.php";
 $cust = new Customer();
 
-/*
-if ( !empty($_POST)) { // if $_POST filled then process the form
-	// initialize $_POST variables
-	$username = $_POST['username']; // username is email address
-	$password = $_POST['password'];
-	$passwordhash = MD5($password);
-	// echo $password . " " . $passwordhash; exit();
-	// robot 87b7cb79481f317bde90c116cf36084b
-		
-	// verify the username/password
-	$pdo = Database::connect();
-	$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-	$sql = "SELECT * FROM fr_persons WHERE email = ? AND password = ? LIMIT 1";
-	$q = $pdo->prepare($sql);
-	$q->execute(array($username,$passwordhash));
-	$data = $q->fetch(PDO::FETCH_ASSOC);
-	
-	if($data) { // if successful login set session variables
-		echo "success!";
-		$_SESSION['fr_person_id'] = $data['id'];
-		$sessionid = $data['id'];
-		$_SESSION['fr_person_title'] = $data['title'];
-		Database::disconnect();
-		header("Location: fr_assignments.php?id=$sessionid ");
-		// javascript below is necessary for system to work on github
-		echo "<script type='text/javascript'> document.location = 'fr_assignments.php'; </script>";
-		exit();
-	}
-	else { // otherwise go to login error page
-		Database::disconnect();
-		header("Location: customers.php?fun=");
-	}
-} 
-
-*/
- 
 // set active record field values, if any 
 // (field values not set for display_list and display_create_form)
 if(isset($_GET["id"]))          $id = $_GET["id"]; 
