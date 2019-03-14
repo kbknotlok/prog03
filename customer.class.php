@@ -8,6 +8,8 @@ class Customer {
 	public $username;
 	public $password; //text from HTML form
 	public $password_hashed; //hased password
+	public $newPassword;
+	public $confirmNewPassword;
 	private $sessionid = null;
     private $noerrors = true;
     private $nameError = null;
@@ -15,6 +17,7 @@ class Customer {
     private $mobileError = null;
 	private $usernameError = null;
 	private $passwordError = null;
+	private $confirmPasswordError = 'Changing password is optional';
     private $title = "Customer";
     private $tableName = "customers";
     
@@ -50,6 +53,8 @@ class Customer {
         $this->generate_form_group("email", $this->emailError, $this->email);
         $this->generate_form_group("mobile", $this->mobileError, $this->mobile);
 		$this->generate_form_group("password", $this->passwordError, $this->password, "", "password");
+		$this->generate_form_group("NewPassword", null, $this->newPassword, "", "password");
+		$this->generate_form_group("ConfirmNewPassword", $this->confirmPasswordError, $this->confirmNewPassword, "", "password");
         $this->generate_html_bottom(3);
     } // end function update_record()
     
@@ -115,17 +120,29 @@ class Customer {
     
     function update_db_record ($id) {
         $this->id = $id;
+		if(isset($_POST["name"]))       $this->name = htmlspecialchars($_POST["name"]);
+		if(isset($_POST["email"]))      $this->email = htmlspecialchars($_POST["email"]);
+		if(isset($_POST["mobile"]))     $this->mobile = htmlspecialchars($_POST["mobile"]);
+		$this->newPassword = htmlspecialchars($_POST["NewPassword"]);
+		$this->confirmNewPassword = htmlspecialchars($_POST["ConfirmNewPassword"]);
         if ($this->fieldsAllValid ()) {
             $this->noerrors = true;
-            $pdo = Database::connect();
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $sql = "UPDATE $this->tableName  set name = ?, email = ?, mobile = ? WHERE id = ?";
-            $q = $pdo->prepare($sql);
-            $q->execute(array($this->name,$this->email,$this->mobile,$this->id));
-            Database::disconnect();
-            header("Location: $this->tableName.php?fun=display_list");
+			
+			if ($this->check_password()) {
+				$pdo = Database::connect();
+				$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+				$sql = "UPDATE $this->tableName  set name = ?, email = ?, mobile = ? WHERE id = ?";
+				$q = $pdo->prepare($sql);
+				$q->execute(array($this->name,$this->email,$this->mobile,$this->id));
+				Database::disconnect();
+				$this->newPassword = null;
+				$this->confirmNewPassword = null;
+				header("Location: $this->tableName.php?fun=display_list");
+			}
         }
         else {
+			$this->newPassword = null;
+			$this->confirmNewPassword = null;
             $this->noerrors = false;
             $this->update_record($id);  // go back to "update" form
         }
@@ -140,7 +157,44 @@ class Customer {
         Database::disconnect();
         header("Location: $this->tableName.php?fun=display_list");
     } // end function delete_db_record()
-    
+   
+	private function check_password() {
+		$valid = true;
+		$pdo = Database::connect();
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		$this->password_hashed = MD5($this->password);
+		$sql = "SELECT * FROM $this->tableName WHERE id = ? AND password_hash = ? LIMIT 1";
+		$q = $pdo->prepare($sql);
+		$q->execute(array($this->id,$this->password_hashed));
+		$data = $q->fetch(PDO::FETCH_ASSOC);
+		
+		if (!($data)) {
+			Database::disconnect();
+			$valid = false;
+			$this->passwordError = 'Incorrect password, unable to change user information';
+			$this->update_record($this->id);
+		}
+		if ($this->newPassword == $this->confirmNewPassword) {
+			if ($this->newPassword != "" && $this->confirmNewPassword != ""){
+				//update password
+				$this->password = $this->newPassword;
+				$this->password_hashed = MD5($this->password);
+				$sql = "UPDATE $this->tableName set password_hash = ? WHERE id = ?";
+				$q = $pdo->prepare($sql);
+				$q->execute(array($this->password_hashed,$this->id));
+			}
+		}
+		else {
+			Database::disconnect();
+			$valid = false;
+			$this->confirmPasswordError = 'New passwords do not match';
+			$this->update_record($this->id);
+		}
+		
+		Database::disconnect();
+		return $valid; // only returns valid, otherwise it exits method through a call of another method(I don't know if this is good practice)
+	}
+	
 	function check_login() {
 		if ($this->loginFieldsValid()) { // validate user input
             // if valid data, verify username and password
@@ -213,6 +267,7 @@ class Customer {
             </head>";
         echo "
             <body>
+				<a href='https://github.com/kbknotlok/prog03' target='_blank'>Github</a><br />
                 <div class='container'>
                     <div class='span10 offset1'>
                         <p class='row'>
@@ -345,12 +400,12 @@ class Customer {
                     <p class='row'>
                         <h3>$this->title" . "s" . "</h3>
                     </p>
-                    <p>
-                        <a href='$this->tableName.php?fun=display_create_form' class='btn btn-success'>Create</a>
-                    </p>
 					<p>
 						<a href='$this->tableName.php?fun=logout' class='btn btn-warning'>Log Out</a>
 					</p>
+                    <p>
+                        <a href='$this->tableName.php?fun=display_create_form' class='btn btn-success'>Create</a>
+                    </p>
                     <div class='row'>
                         <table class='table table-striped table-bordered'>
                             <thead>
