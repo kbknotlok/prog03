@@ -325,32 +325,6 @@ class Customer {
 		}
         return $valid;
     } // end function fieldsAllValid() 
-    
-	function login_error() {
-		echo "
-			<html lang='en'>
-			<head>
-				<meta charset='utf-8'>
-				<link   href='css/bootstrap.min.css' rel='stylesheet'>
-				<script src='js/bootstrap.min.js'></script>
-			</head>
-			<body>
-				<div class='container'>
-					<div class='row'>
-						<h3>Login Error</h3>
-					</div>
-		
-					<div class='row'>
-						<p>
-							<a href='customers.php' class='btn btn-danger'>Return to Login</a>
-						</p>
-					</div>
-		
-				</div> <!-- end div: class='container' -->
-			</body>
-		</html>
-		";
-	}
 	
     function list_records() {
         echo "<!DOCTYPE html>
@@ -366,7 +340,7 @@ class Customer {
         echo "
             </head>
             <body>
-                <a href='https://github.com/kbknotlok' target='_blank'>Github</a><br />
+                <a href='https://github.com/kbknotlok/prog03' target='_blank'>Github</a><br />
                 <div class='container'>
                     <p class='row'>
                         <h3>$this->title" . "s" . "</h3>
