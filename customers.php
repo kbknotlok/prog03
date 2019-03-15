@@ -23,7 +23,7 @@ if(isset($_POST["password"]))   $cust->password = htmlspecialchars($_POST["passw
 if(isset($_GET["fun"])) {
 	$fun = $_GET["fun"];
 	if (!isset($_SESSION["user_id"])) { // if not logged in
-		if (!($fun == "display_create_form" || $fun == "check_login" || $fun == "insert_db_record")) { // if not going to allowed page, then go to login page
+		if (!($fun == "display_create_form" || $fun == "check_login" || $fun == "insert_db_record" || $fun == "verify_email" || $fun == "send_email")) { // if not going to allowed page, then go to login page
 			$fun="display_login_view";
 		}
 	}
@@ -31,6 +31,10 @@ if(isset($_GET["fun"])) {
 else $fun = "display_login_view"; 
 
 switch ($fun) {
+	case "send_email":			$cust->send_email();
+		break;
+	case "verify_email":		$cust->verify_email();
+		break;
 	case "logout":				$cust->logout();
 		break;
 	case "check_login":			$cust->check_login();
