@@ -17,6 +17,7 @@ class Customer {
     private $mobileError = null;
 	private $usernameError = null;
 	private $passwordError = null;
+	private $confirmCodeError = null;
 	private $confirmPasswordError = 'Changing password is optional';
     private $title = "Customer";
     private $tableName = "customers";
@@ -66,6 +67,13 @@ class Customer {
         $this->generate_form_group("mobile", $this->mobileError, $this->mobile, "disabled");
         $this->generate_html_bottom(4);
     } // end function delete_record()
+	
+	function confirm_page() {
+		$this->generate_html_top(5);
+		$this->generate_form_group("code", $this->confirmCodeError, "", "autofocus");
+		$this->generate_form_group("password", $this->passwordError, $this->password, "", "password");
+		$this->generate_html_bottom(5);
+	}
     
     /*
      * This method inserts one record into the table, 
@@ -84,19 +92,29 @@ class Customer {
      *   or Create form (if errors)
      */
     function insert_db_record () {
+		if (isset($_SESSION['name'])) $this->name = $_SESSION['name'];
+		if (isset($_SESSION['email'])) $this->email = $_SESSION['email'];
+		if (isset($_SESSION['mobile'])) $this->mobile = $_SESSION['mobile'];
+		if (isset($_POST["password"]))   $this->password = htmlspecialchars($_POST["password"]);
         if ($this->fieldsAllValid ()) { // validate user input
-            // if valid data, insert record into table
-            $pdo = Database::connect();
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-			$this->password_hashed = MD5($this->password);
-            $sql = "INSERT INTO $this->tableName (name,email,mobile,password_hash) values(?, ?, ?, ?)";
-            $q = $pdo->prepare($sql);
-            $q->execute(array($this->name,$this->email,$this->mobile,$this->password_hashed));
-            Database::disconnect();
-			if (isset($_SESSION["user_id"])){
-				header("Location: $this->tableName.php?fun=display_list"); // go back to "list"
+			if ($this->check_email()) { 
+				// if valid data, insert record into table
+				$pdo = Database::connect();
+				$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+				$this->password_hashed = MD5($this->password);
+				$sql = "INSERT INTO $this->tableName (name,email,mobile,password_hash) values(?, ?, ?, ?)";
+				$q = $pdo->prepare($sql);
+				$q->execute(array($this->name,$this->email,$this->mobile,$this->password_hashed));
+				Database::disconnect();
+				if (isset($_SESSION["user_id"])){
+					header("Location: $this->tableName.php?fun=display_list"); // go back to "list"
+				}
+				else header("Location: $this->tableName.php"); //go to login
 			}
-			else header("Location: $this->tableName.php"); //go to login
+			else {
+				$this->emailError = 'This email has already been registered!';
+				$this->create_record();
+            }
         }
         else {
             // if not valid data, go back to "create" form, with errors
@@ -121,13 +139,12 @@ class Customer {
     function update_db_record ($id) {
         $this->id = $id;
 		if(isset($_POST["name"]))       $this->name = htmlspecialchars($_POST["name"]);
-		if(isset($_POST["email"]))      $this->email = htmlspecialchars($_POST["email"]);
+		if(isset($_POST["email"]))  	$this->email = htmlspecialchars($_POST["email"]);
 		if(isset($_POST["mobile"]))     $this->mobile = htmlspecialchars($_POST["mobile"]);
 		$this->newPassword = htmlspecialchars($_POST["NewPassword"]);
 		$this->confirmNewPassword = htmlspecialchars($_POST["ConfirmNewPassword"]);
         if ($this->fieldsAllValid ()) {
             $this->noerrors = true;
-			
 			if ($this->check_password()) {
 				$pdo = Database::connect();
 				$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -157,6 +174,71 @@ class Customer {
         Database::disconnect();
         header("Location: $this->tableName.php?fun=display_list");
     } // end function delete_db_record()
+	
+	function send_email() {
+		if ($this->fieldsAllValid()) {
+			$_SESSION['name'] = htmlspecialchars($this->name);
+			$_SESSION['email'] = htmlspecialchars($this->email);
+			$_SESSION['mobile'] = htmlspecialchars($this->mobile);
+			if ($this->check_email()) {
+				//send email with custom code
+				$chs = 'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890!@#$%^&*()-=';
+				$chs = str_shuffle($chs);
+				$_SESSION['conCode']= substr($chs, 0, 10);
+				
+				$to = $this->email;
+				$subject = "Email Confirmation";
+				$message = "Hello " . $this->name . ", Here is your confirmation code: " . $_SESSION['conCode'];
+				$headers = "From: noreply-kbkovac@svsu.edu \r\nReply-To: noreply-kbkovac@svsu.edu";
+				if (mail($to, $subject, $message, $headers)) {
+					$this->confirm_page();
+				}
+				else {
+					$this->confirmCodeError = 'Email could not send.';
+					$this->confirm_page();
+				}
+			}
+			else {
+				$this->emailError = 'This email has already been registered!';
+				$this->create_record();
+			}
+		}
+		else {
+			$this->create_record();
+		}
+	}
+	
+	function verify_email() {
+		if (isset($_POST['code'])) {
+			$theirCode = htmlspecialchars($_POST['code']);
+			if ($theirCode == htmlspecialchars($_SESSION['conCode'])) {
+				$this->insert_db_record();
+			}
+			else {
+				$this->confirmCodeError = "Code does not match!";
+				$this->confirm_page();
+			}
+		}
+		else {
+			$this->confirmCodeError = "Please enter code!";
+			$this->confirm_page();
+		}
+	}
+	
+	private function check_email() {
+		$valid = false;
+		$pdo = Database::connect();
+		$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		$sql = $sql = "SELECT * FROM $this->tableName WHERE email = ? LIMIT 1";
+		$q = $pdo->prepare($sql);
+		$q->execute(array($this->email));
+		$data = $q->fetch(PDO::FETCH_ASSOC);
+		if (!($data)) {
+			$valid = true; // valid email to register/create new user with
+		}
+		Database::disconnect();
+		return $valid;
+	}
    
 	private function check_password() {
 		$valid = true;
@@ -216,7 +298,6 @@ class Customer {
 				Database::disconnect();
 				$this->usernameError = 'Invalid login information';
 				$this->login_view();
-				//header("Location: $this->tableName.php"); // go back to "login"
 			}
         }
         else {
@@ -236,7 +317,7 @@ class Customer {
 				$funWord = "Login: "; $funNext = "check_login";
 				break;
             case 1: // create
-                $funWord = "Create a $this->title"; $funNext = "insert_db_record"; 
+                $funWord = "Create a $this->title"; $funNext = "send_email"; // change to send_email when server allows mail() function
                 break;
             case 2: // read
                 $funWord = "Read a $this->title"; $funNext = "none"; 
@@ -247,6 +328,9 @@ class Customer {
             case 4: // delete
                 $funWord = "Delete a $this->title"; $funNext = "delete_db_record&id=" . $id; 
                 break;
+			case 5: // confirm email
+				$funWord = "Confirm a $this->title"; $funNext = "verify_email";
+				break;
             default: 
                 echo "Error: Invalid function: generate_html_top()"; 
                 exit();
@@ -268,6 +352,9 @@ class Customer {
         echo "
             <body>
 				<a href='https://github.com/kbknotlok/prog03' target='_blank'>Github</a><br />
+				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog02/prog02_diagram' target='_blank'>Prog02 Diagram</a><br /></p>
+				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog03/prog03_diagram' target='_blank'>Prog03 Diagram</a><br /></p>
+				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog03/prog03_UML.png' target='_blank'>Prog03 UML</a><br /></p>
                 <div class='container'>
                     <div class='span10 offset1'>
                         <p class='row'>
@@ -294,6 +381,9 @@ class Customer {
             case 4: // delete
                 $funButton = "<button type='submit' class='btn btn-danger'>Delete</button>"; 
                 break;
+			case 5: // confirm
+				$funButton = "<button type='submit' class='btn btn-info'>Confirm</button>";
+				break;
             default: 
                 echo "Error: Invalid function: generate_html_bottom()"; 
                 exit();
@@ -304,6 +394,10 @@ class Customer {
                                 $funButton ";
 		if ($fun == 0) {
 			echo 				"<a class='btn btn-success' href='$this->tableName.php?fun=display_create_form'>Join</a>";
+		}
+		else if ($fun == 5) {
+			echo "
+                                <a class='btn btn-secondary' href='$this->tableName.php'>Back to Login</a>";
 		}
 		else {
 			echo "
@@ -396,6 +490,9 @@ class Customer {
             </head>
             <body>
                 <a href='https://github.com/kbknotlok/prog03' target='_blank'>Github</a><br />
+				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog02/prog02_diagram' target='_blank'>Prog02 Diagram</a><br /></p>
+				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog03/prog03_diagram' target='_blank'>Prog03 Diagram</a><br /></p>
+				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog03/prog03_UML.png' target='_blank'>Prog03 UML</a><br /></p>
                 <div class='container'>
                     <p class='row'>
                         <h3>$this->title" . "s" . "</h3>
