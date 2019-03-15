@@ -317,7 +317,7 @@ class Customer {
 				$funWord = "Login: "; $funNext = "check_login";
 				break;
             case 1: // create
-                $funWord = "Create a $this->title"; $funNext = "send_email"; // change to send_email when server allows mail() function
+                $funWord = "Create a $this->title"; $funNext = "insert_db_record"; // change to send_email when server allows mail() function
                 break;
             case 2: // read
                 $funWord = "Read a $this->title"; $funNext = "none"; 
@@ -352,6 +352,7 @@ class Customer {
         echo "
             <body>
 				<a href='https://github.com/kbknotlok/prog03' target='_blank'>Github</a><br />
+				<p><a href='http://koltonkovac.000webhostapp.com/prog03/customers.php' target='_blank'>Link to 000webhost version (email confirmation)</a><br /></p>
 				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog02/prog02_diagram' target='_blank'>Prog02 Diagram</a><br /></p>
 				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog03/prog03_diagram' target='_blank'>Prog03 Diagram</a><br /></p>
 				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog03/prog03_UML.png' target='_blank'>Prog03 UML</a><br /></p>
@@ -490,6 +491,7 @@ class Customer {
             </head>
             <body>
                 <a href='https://github.com/kbknotlok/prog03' target='_blank'>Github</a><br />
+				<p><a href='http://koltonkovac.000webhostapp.com/prog03/customers.php' target='_blank'>Link to 000webhost version (email confirmation)</a><br /></p>
 				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog02/prog02_diagram' target='_blank'>Prog02 Diagram</a><br /></p>
 				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog03/prog03_diagram' target='_blank'>Prog03 Diagram</a><br /></p>
 				<p><a href='https://csis.svsu.edu/~kbkovac/cis355/prog03/prog03_UML.png' target='_blank'>Prog03 UML</a><br /></p>
